@@ -1,0 +1,168 @@
+MILKDROP_PRESET_VERSION=201
+PSVERSION=2
+PSVERSION_WARP=2
+PSVERSION_COMP=2
+[preset00]
+fRating=5.000
+fGammaAdj=1.000
+fDecay=0.975
+fVideoEchoZoom=1.000
+fVideoEchoAlpha=0.000
+nVideoEchoOrientation=0
+nWaveMode=0
+bAdditiveWaves=0
+bWaveDots=0
+bWaveThick=0
+bModWaveAlphaByVolume=0
+bMaximizeWaveColor=0
+bTexWrap=0
+bDarkenCenter=0
+bRedBlueStereo=0
+bBrighten=0
+bDarken=0
+bSolarize=0
+bInvert=0
+fWaveAlpha=0.000
+fWaveScale=1.000
+fWaveSmoothing=0.000
+fWaveParam=0.000
+fModWaveAlphaStart=0.750
+fModWaveAlphaEnd=0.950
+fWarpAnimSpeed=1.600
+fWarpScale=2.200
+fZoomExponent=1.000
+nMotionVectorsX=0.000
+nMotionVectorsY=0.000
+mv_dx=0.000
+mv_dy=0.000
+mv_l=0.000
+mv_r=0.000
+mv_g=0.000
+mv_b=0.000
+mv_a=0.000
+zoom=1.000
+rot=0.000
+cx=0.500
+cy=1.000
+dx=0.000
+dy=0.000
+warp=0.000
+sx=1.000
+sy=1.000
+wave_r=1.000
+wave_g=1.000
+wave_b=1.000
+wave_x=0.500
+wave_y=0.500
+ob_size=0.000
+ob_r=0.000
+ob_g=0.000
+ob_b=0.000
+ob_a=0.000
+ib_size=0.000
+ib_r=0.000
+ib_g=0.000
+ib_b=0.000
+ib_a=0.000
+
+# ---------------------------------------------------------------------------
+# FUEL BED -- Poweramp native spectrum bars (bars_* is a Poweramp extension).
+# 128 bars is the documented maximum, giving full-range frequency coverage
+# rather than the three bands (bass/mid/treb) stock Milkdrop exposes.
+# Poweramp draws these into the feedback buffer, so each frame's bars become
+# the next frame's rising flame.
+# ---------------------------------------------------------------------------
+bars_mode=1
+bars_num_x=128
+bars_num_y=24
+bars_spacing_x=0.000
+bars_spacing_y=0.000
+bars_x=0.000
+bars_y=0.000
+bars_rot=0
+bars_sx=1.000
+bars_sy=0.300
+bars_rounding=0
+bars_smooth=0.500
+bars_sensitivity=0.650
+bars_bass_sensitivity=0.550
+
+# Bar body: white-hot at the base cooling to orange at the tip.
+bars_color_b=0xFFFFF6E2
+bars_color_t=0xFFFF7A18
+bars_color_l=0x00000000
+bars_color_r=0x00000000
+
+# Above bars_thr (loud bins only) the tips flare to full white -- the
+# transient "flare-up" when a frequency band spikes.
+bars_thr=0.720
+bars_thr_color_b=0xFFFFD98A
+bars_thr_color_t=0xFFFFFFFF
+bars_thr_color_l=0x00000000
+bars_thr_color_r=0x00000000
+
+# ---------------------------------------------------------------------------
+# PER-FRAME
+# ---------------------------------------------------------------------------
+# q1 = flame vigour (buoyancy), q2 = high-frequency flicker
+per_frame_1=q1 = 0.60 + 0.55*bass_att;
+per_frame_2=q2 = 0.50 + 0.55*treb_att;
+# Louder passages hold heat marginally longer, so the fire visibly swells.
+per_frame_3=decay = 0.9750 + 0.0150*bass_att;
+per_frame_4=decay = min(decay, 0.9950);
+
+# ---------------------------------------------------------------------------
+# PER-PIXEL (warp mesh) -- the convection model.
+# NOTE: in per-pixel equations y=0 is the TOP of the screen and y=1 the
+# BOTTOM, so ht below is height ABOVE the fuel bed. (Custom-wave y is
+# inverted from this; bars_* sidesteps the issue entirely.)
+# dy is negative to move the image UP: -0.01 = up 1% per frame.
+# ---------------------------------------------------------------------------
+per_pixel_1=ht = 1 - y;
+# Buoyancy: hot gas starts slow at the bed and accelerates as it rises.
+per_pixel_2=dy = -(0.0045 + 0.0130*ht)*q1;
+# Lateral waver, amplitude growing with height (ht^2) -- flames are steady
+# at the base and unstable at the tips.
+per_pixel_3=dx = 0.0075*ht*ht*sin(x*8.0 + time*1.9 + ht*4.5);
+# Finer, faster ripple driven by treble.
+per_pixel_4=dx = dx + 0.0038*ht*sin(x*19.0 - time*3.1)*q2;
+# Gentle inward pull so the plume tapers instead of spreading flat.
+per_pixel_5=dx = dx + (0.5 - x)*0.0070*ht;
+# Slight vertical elongation, anchored at the bed (cy=1).
+per_pixel_6=sy = 1 + 0.006*ht;
+# Turbulence only in the upper flame, never in the fuel bed.
+per_pixel_7=warp = 0.10*ht;
+
+# ---------------------------------------------------------------------------
+# WARP SHADER -- blackbody cooling.
+# A scalar fDecay dims toward grey and keeps the hue, which is what makes
+# most "fire" presets read as orange smoke. Decaying the channels at
+# different rates instead makes colour track temperature the way real
+# incandescence does: white -> yellow -> orange -> red -> black.
+# The subtractive floor is the "- cooling" term from the classic demoscene
+# fire routine; without it dim haze accumulates and the flames lose their
+# dark edges.
+# sampler_fc_main = filtered + CLAMPED; wrapping would teleport flames
+# leaving the top back to the bottom.
+# ---------------------------------------------------------------------------
+warp_1=`shader_body
+warp_2=`{
+warp_3=`    float3 c = tex2D(sampler_fc_main, uv).xyz;
+warp_4=`    c *= float3(0.9880, 0.9550, 0.9160);
+warp_5=`    c = max(c - 0.0030, 0.0);
+warp_6=`    ret = c;
+warp_7=`}
+
+# ---------------------------------------------------------------------------
+# COMPOSITE SHADER -- bloom + filmic rolloff.
+# Two blur taps give the heat-glow halo. The exponential curve lets hot
+# cores saturate smoothly to white instead of clipping into flat plates,
+# while lifting the dim embers enough to stay visible.
+# ---------------------------------------------------------------------------
+comp_1=`shader_body
+comp_2=`{
+comp_3=`    float3 c = tex2D(sampler_fc_main, uv).xyz;
+comp_4=`    c += GetBlur1(uv) * 0.50;
+comp_5=`    c += GetBlur2(uv) * 0.26;
+comp_6=`    ret = 1.0 - exp(-c * 1.70);
+comp_7=`}

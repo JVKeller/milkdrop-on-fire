@@ -1,0 +1,118 @@
+[preset00]
+# Pure Milkdrop v1 -- no shader blocks at all, no PSVERSION header. This is
+# the maximum-compatibility fallback: if neither "Combustion" nor "Combustion
+# Core" loads, Poweramp's HLSL->GLSL translation is the culprit and this file
+# should still run.
+#
+# Trade-off: without a warp shader there is no per-channel decay, and
+# Milkdrop v1's scalar fDecay preserves hue while dimming. Colour therefore
+# does NOT track temperature -- the flames fade orange-to-black rather than
+# running the white -> yellow -> orange -> red incandescence ramp. The heat
+# gradient here is baked into the bar colours instead, so it reads as fire
+# but is noticeably less physical than the shader versions.
+#
+# fDecay is lower and fGammaAdj higher than the shader presets to compensate:
+# faster fade keeps the dark edges crisp (there is no subtractive floor to do
+# it), and the gamma lift keeps hot cores from looking muddy.
+fRating=5.000
+fGammaAdj=1.500
+fDecay=0.945
+fVideoEchoZoom=1.000
+fVideoEchoAlpha=0.000
+nVideoEchoOrientation=0
+nWaveMode=0
+bAdditiveWaves=0
+bWaveDots=0
+bWaveThick=0
+bModWaveAlphaByVolume=0
+bMaximizeWaveColor=0
+bTexWrap=0
+bDarkenCenter=0
+bRedBlueStereo=0
+bBrighten=0
+bDarken=0
+bSolarize=0
+bInvert=0
+fWaveAlpha=0.000
+fWaveScale=1.000
+fWaveSmoothing=0.000
+fWaveParam=0.000
+fModWaveAlphaStart=0.750
+fModWaveAlphaEnd=0.950
+fWarpAnimSpeed=1.600
+fWarpScale=2.200
+fZoomExponent=1.000
+nMotionVectorsX=0.000
+nMotionVectorsY=0.000
+mv_dx=0.000
+mv_dy=0.000
+mv_l=0.000
+mv_r=0.000
+mv_g=0.000
+mv_b=0.000
+mv_a=0.000
+zoom=1.000
+rot=0.000
+cx=0.500
+cy=1.000
+dx=0.000
+dy=0.000
+warp=0.000
+sx=1.000
+sy=1.000
+wave_r=1.000
+wave_g=1.000
+wave_b=1.000
+wave_x=0.500
+wave_y=0.500
+ob_size=0.000
+ob_r=0.000
+ob_g=0.000
+ob_b=0.000
+ob_a=0.000
+ib_size=0.000
+ib_r=0.000
+ib_g=0.000
+ib_b=0.000
+ib_a=0.000
+
+bars_mode=1
+bars_num_x=128
+bars_num_y=24
+bars_spacing_x=0.000
+bars_spacing_y=0.000
+bars_x=0.000
+bars_y=0.000
+bars_rot=0
+bars_sx=1.000
+bars_sy=0.340
+bars_rounding=0
+bars_smooth=0.500
+bars_sensitivity=0.650
+bars_bass_sensitivity=0.550
+
+# The whole heat ramp has to live in the bar gradient here, so it spans a
+# wider range than the shader presets: near-white base to deep ember tip.
+bars_color_b=0xFFFFFDF4
+bars_color_t=0xFFE03A04
+bars_color_l=0x00000000
+bars_color_r=0x00000000
+
+bars_thr=0.700
+bars_thr_color_b=0xFFFFE9B4
+bars_thr_color_t=0xFFFFFFFF
+bars_thr_color_l=0x00000000
+bars_thr_color_r=0x00000000
+
+per_frame_1=q1 = 0.60 + 0.55*bass_att;
+per_frame_2=q2 = 0.50 + 0.55*treb_att;
+per_frame_3=decay = 0.9450 + 0.0250*bass_att;
+per_frame_4=decay = min(decay, 0.9850);
+
+per_pixel_1=ht = 1 - y;
+per_pixel_2=dy = -(0.0045 + 0.0130*ht)*q1;
+per_pixel_3=dx = 0.0075*ht*ht*sin(x*8.0 + time*1.9 + ht*4.5);
+per_pixel_4=dx = dx + 0.0038*ht*sin(x*19.0 - time*3.1)*q2;
+per_pixel_5=dx = dx + (0.5 - x)*0.0070*ht;
+per_pixel_6=sy = 1 + 0.006*ht;
+per_pixel_7=warp = 0.10*ht;
