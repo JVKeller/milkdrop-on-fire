@@ -1,0 +1,178 @@
+MILKDROP_PRESET_VERSION=201
+PSVERSION=2
+PSVERSION_WARP=2
+PSVERSION_COMP=2
+[preset00]
+# Combustion Digital -- the spectrum IS the subject, not the fuel bed.
+#
+# Rebuilt from "Combustion" after that one read as a smear of upward flow with
+# the bands lost underneath it. Three changes drive the difference:
+#   1. Bars are 2.3x taller and spaced apart, so they read as discrete
+#      reactive bands instead of a continuous bed.
+#   2. Rise speed roughly halved and decay sped up, so flames lick off the bar
+#      tops instead of smearing the whole spectrum upward into soup.
+#   3. Composite shader quantises to a pixel grid and posterises to a stepped
+#      palette -- the chunky, banded look of the classic Winamp/demoscene
+#      fire rather than a smooth gradient.
+fRating=5.000
+fGammaAdj=1.000
+fDecay=0.955
+fVideoEchoZoom=1.000
+fVideoEchoAlpha=0.000
+nVideoEchoOrientation=0
+nWaveMode=0
+bAdditiveWaves=0
+bWaveDots=0
+bWaveThick=0
+bModWaveAlphaByVolume=0
+bMaximizeWaveColor=0
+bTexWrap=0
+bDarkenCenter=0
+bRedBlueStereo=0
+bBrighten=0
+bDarken=0
+bSolarize=0
+bInvert=0
+fWaveAlpha=0.000
+fWaveScale=1.000
+fWaveSmoothing=0.000
+fWaveParam=0.000
+fModWaveAlphaStart=0.750
+fModWaveAlphaEnd=0.950
+fWarpAnimSpeed=1.400
+fWarpScale=2.600
+fZoomExponent=1.000
+nMotionVectorsX=0.000
+nMotionVectorsY=0.000
+mv_dx=0.000
+mv_dy=0.000
+mv_l=0.000
+mv_r=0.000
+mv_g=0.000
+mv_b=0.000
+mv_a=0.000
+zoom=1.000
+rot=0.000
+cx=0.500
+cy=1.000
+dx=0.000
+dy=0.000
+warp=0.000
+sx=1.000
+sy=1.000
+wave_r=1.000
+wave_g=1.000
+wave_b=1.000
+wave_x=0.500
+wave_y=0.500
+ob_size=0.000
+ob_r=0.000
+ob_g=0.000
+ob_b=0.000
+ob_a=0.000
+ib_size=0.000
+ib_r=0.000
+ib_g=0.000
+ib_b=0.000
+ib_a=0.000
+
+# ---------------------------------------------------------------------------
+# SPECTRUM -- now the main visual element.
+# 64 bands rather than 128: at 128 on a phone each bar is barely a pixel wide
+# and the whole thing greys into a wall. 64 with real spacing reads as an
+# analyzer. bars_sy 0.70 (was 0.30) is the fix for "bands are very short".
+# ---------------------------------------------------------------------------
+bars_mode=1
+bars_num_x=64
+bars_num_y=24
+bars_spacing_x=0.300
+bars_spacing_y=0.000
+bars_x=0.000
+bars_y=0.000
+bars_rot=0
+bars_sx=1.000
+bars_sy=0.700
+bars_rounding=0
+bars_smooth=0.350
+bars_sensitivity=0.700
+bars_bass_sensitivity=0.600
+
+# Each bar is itself a flame column: white-hot at the base, cooling to deep
+# red at the tip. The warp shader then keeps cooling whatever rises off it.
+bars_color_b=0xFFFFFFE8
+bars_color_t=0xFFE82800
+bars_color_l=0x00000000
+bars_color_r=0x00000000
+
+# Top 12% of loud bars flares bright -- the transient peak catching light.
+bars_thr=0.880
+bars_thr_color_b=0xFFFFC040
+bars_thr_color_t=0xFFFFF0A0
+bars_thr_color_l=0x00000000
+bars_thr_color_r=0x00000000
+
+# ---------------------------------------------------------------------------
+# PER-FRAME
+# ---------------------------------------------------------------------------
+per_frame_1=q1 = 0.60 + 0.55*bass_att;
+per_frame_2=q2 = 0.50 + 0.55*treb_att;
+per_frame_3=decay = 0.9550 + 0.0200*bass_att;
+per_frame_4=decay = min(decay, 0.9850);
+
+# ---------------------------------------------------------------------------
+# PER-PIXEL -- convection, deliberately gentler than "Combustion".
+# Rise speeds are roughly half the originals. The previous values carried the
+# bars upward faster than they could be read, which is what produced the
+# "just flowing up" effect. y=0 is TOP, y=1 is BOTTOM; ht is height above the
+# bar bed; dy negative moves the image UP.
+# ---------------------------------------------------------------------------
+per_pixel_1=ht = 1 - y;
+per_pixel_2=dy = -(0.0025 + 0.0060*ht)*q1;
+# Lateral waver, still growing with height but tighter and lower amplitude so
+# the flame stays over its own band instead of bleeding sideways across the
+# spectrum.
+per_pixel_3=dx = 0.0040*ht*ht*sin(x*14.0 + time*2.4 + ht*5.5);
+per_pixel_4=dx = dx + 0.0022*ht*sin(x*31.0 - time*3.6)*q2;
+# No inward taper this time -- it pulled the outer bands toward the middle and
+# blurred which frequency was which.
+per_pixel_5=sy = 1 + 0.004*ht;
+per_pixel_6=warp = 0.05*ht;
+
+# ---------------------------------------------------------------------------
+# WARP SHADER -- blackbody cooling (unchanged; this part was working).
+# Channels decay at different rates so colour tracks temperature:
+# white -> yellow -> orange -> red -> black. Faster than "Combustion" so
+# flames stay short and the bars underneath remain legible.
+# ---------------------------------------------------------------------------
+warp_1=`shader_body
+warp_2=`{
+warp_3=`    float3 c = tex2D(sampler_fc_main, uv).xyz;
+warp_4=`    c *= float3(0.9840, 0.9440, 0.9020);
+warp_5=`    c = max(c - 0.0060, 0.0);
+warp_6=`    ret = c;
+warp_7=`}
+
+# ---------------------------------------------------------------------------
+# COMPOSITE SHADER -- this is what makes it read as *digital* fire.
+#
+# Snapping uv to a coarse grid before sampling gives the chunky low-res look
+# of the original effect, which ran on a small buffer and got scaled up. The
+# grid is 128 cells wide and corrected by texsize so cells stay square on a
+# tall phone screen instead of stretching into ribbons. 128 cells against 64
+# bars means exactly 2 cells per band, so bars land on grid lines rather than
+# shimmering across them.
+#
+# The floor() at the end posterises to a stepped palette -- the hard colour
+# banding of an 8-bit palette ramp rather than a smooth gradient.
+# ---------------------------------------------------------------------------
+comp_1=`shader_body
+comp_2=`{
+comp_3=`    float bw = 1.0/128.0;
+comp_4=`    float2 blk = float2(bw, bw * texsize.x / texsize.y);
+comp_5=`    float2 puv = (floor(uv/blk) + 0.5) * blk;
+comp_6=`    float3 c = tex2D(sampler_fc_main, puv).xyz;
+comp_7=`    c += GetBlur1(puv) * 0.32;
+comp_8=`    c = 1.0 - exp(-c * 1.85);
+comp_9=`    c = floor(c * 12.0 + 0.5) / 12.0;
+comp_10=`    ret = c;
+comp_11=`}
